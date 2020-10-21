@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 Ts = -10
-
+imagePath = "220.jpeg"
 image = Image.open(imagePath)
 
 bgr = np.float32(image)/255
@@ -48,43 +48,45 @@ for k in range(0,m.shape[0]):
 
 sccp1 = np.copy(mhsi)
 
-Th = np.mean(mshi) + np.std(mhsi)
+Th = np.mean(mhsi) + np.std(mhsi)
 
-for k in range(0,mshi.shape[0]):
-    for l in range(0,mshi.shape[1]):
+for k in range(0,mhsi.shape[0]):
+    for l in range(0,mhsi.shape[1]):
 
         if mhsi[k][l] > Th:
-            sccp1 = 1
+            sccp1[k][l] = 1
         else:
-            sccp1 = 0
+            sccp1[k][l] = 0
 
 
 mrgb = np.copy(m)
-
 sccp2 = np.copy(mrgb)
-
-Th = np.mean(blue) + np.std(blue)
 
 for k in range(0,mrgb.shape[0]):
     for l in range(0,mrgb.shape[1]):
-        if blue[k][l] - red[k][l] > Ts:
-            mrgb = blue[k][l]
+        if (blue[k][l] - red[k][l]) > Ts:
+            mrgb[k][l] = blue[k][l]
 
         else:
-            mrgb = 0
+            mrgb[k][l] = 0
 
+Tb = np.mean(blue) + np.std(blue)
 
 for k in range(0,blue.shape[0]):
     for l in range(0,blue.shape[1]):
 
         if blue[k][l] > Tb:
-            sccp2 = 1
+            sccp2[k][l] = 1
         else:
-            sccp2 = 0
+            sccp2[k][l] = 0
 
-dilated_sccp1 = cv2.dilate(sccp1, kernel, iterations = 1)
 
-r=sccp2/dilated_sccp1
+#dilated_sccp1 = cv2.dilate(sccp2, kernel, iterations = 1)
+
+erode_sccp1 = cv2.erode(sccp2, kernel, iterations = 2)
+cv2.imwrite('result_mrgb.png', mrgb*255)
+mrgb=np.where(mrgb>0.7,1,0)
+r=np.where(erode_sccp1+mrgb==2,1,0)
 
 sfine=np.copy(m)
 
@@ -92,23 +94,48 @@ Tc=0.6
 
 for k in range(0,sfine.shape[0]):
     for l in range(0,sfine.shape[1]):
-        if r>Tc:
+        if r[k][l] >Tc:
             sfine[k][l]=1
         else:
             sfine[k][l]=0
 
+cv2.imwrite('result_sfine.png', sfine*255)
+cv2.imwrite('result_erode.png', erode_sccp1*255)
+
+
+dilate_fine = cv2.dilate(sfine, kernel, iterations = 1)
+new_fine = np.copy(dilate_fine)
+
+for k in range(0, dilate_fine.shape[0]):
+    for l in range(0, dilate_fine.shape[1]):
+        if dilate_fine[k][l]==1 and sfine[k][l]==0:
+            new_fine[k][l] = dilate_fine[k][l]
+        else:
+            new_fine[k][l] = sfine[k][l]
 
 LB=converter.Linear_stretch(blue)
 
 stcp=np.copy(LB)
-x=np.arange(255)
-y=blue.reshape(1)
+# x=np.arange(255)
+# y=blue.reshape(1,)
 
-Tb=
+# blue_hist= cv2.calcHist(blue, [0], None, [256], [0,256])
+# plt.plot(blue_hist)
+#
+# plt.show()
+
+Tbs=185
 
 for k in range(0,stcp.shape[0]):
     for l in range(0,stcp.shape[1]):
-        if LB[k][l]>Tb:
+        if LB[k][l]>Tbs:
             stcp[k][l]=1
         else:
             stcp[k][l]=0
+
+cv2.imwrite('result_stcp.png', stcp*255)
+
+a=new_fine+stcp
+concat=np.where(a==2,1,0)
+
+cv2.imwrite('result.png',concat*255)
