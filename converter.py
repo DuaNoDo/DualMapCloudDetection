@@ -62,4 +62,53 @@ def Linear_stretch(band):
 def histogram(image):
     hist1 = cv2.calcHist(image,[0],None,[256],[0,256])
     hist1.show()
-    
+
+def image_tiling(image):
+    numrows, numcols = 128, 128
+    height = int(image.shape[0] / numrows)
+    width = int(image.shape[1] / numcols)
+
+    for row in range(numrows):
+        for col in range(numcols):
+            y0 = row * height
+            y1 = y0 + height
+            x0 = col * width
+            x1 = x0 + width
+            cv2.imwrite('tiling/%d_%d.jpg' % (row, col), image[y0:y1, x0:x1])
+
+
+def hist_tiling(image):
+    numrows, numcols = 128, 128
+    height = int(image.shape[0] / numrows)
+    width = int(image.shape[1] / numcols)
+
+    for row in range(numrows):
+        for col in range(numcols):
+            y0 = row * height
+            y1 = y0 + height
+            x0 = col * width
+            x1 = x0 + width
+            cv2.imwrite('hist_tiling/%d_%d.jpg' % (row, col), image[y0:y1, x0:x1])
+
+
+
+def histogram_equalization(image):
+
+    hist, bins = np.histogram(image.flatten(), 256, [0, 256])
+
+    cdf = hist.cumsum()
+
+    # cdf의 값이 0인 경우는 mask처리를 하여 계산에서 제외
+    # mask처리가 되면 Numpy 계산에서 제외가 됨
+    # 아래는 cdf array에서 값이 0인 부분을 mask처리함
+    cdf_m = np.ma.masked_equal(cdf, 0)
+
+    # History Equalization 공식
+    cdf_m = (cdf_m - cdf_m.min()) * 255 / (cdf_m.max() - cdf_m.min())
+
+    # Mask처리를 했던 부분을 다시 0으로 변환
+    cdf = np.ma.filled(cdf_m, 0).astype('uint8')
+
+    img2 = cdf[image]
+
+    return img2
